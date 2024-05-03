@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".MainActivity">
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/name"
+        android:hint="name"
+        />
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/marks"
+        android:hint="marks"
+        />
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/ids"
+        android:hint="id"
+        />
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Insert"
+        android:id="@+id/Button"/>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Show"
+        android:id="@+id/show"/>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Update"
+        android:id="@+id/Update"/>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Delete"
+        android:id="@+id/delete"/>
+</LinearLayout>
+
+package com.example.sql;
+
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import android.database.Cursor;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.Toast;
+public class MainActivity extends AppCompatActivity {
+    DatabaseHelper mydb;
+    EditText etname,etmarks,etid;
+    Button insertbtn,showbtn,updatebtn,deletebtn;
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        mydb = new DatabaseHelper(this);
+        etname = findViewById(R.id.name);
+        etmarks = findViewById(R.id.marks);
+        insertbtn = findViewById(R.id.Button);
+        showbtn = findViewById(R.id.show);
+        updatebtn = findViewById(R.id.Update);
+        deletebtn = findViewById(R.id.delete);
+        insertdata();
+        showdata();
+        update();
+        delete();
+    }
+    public void insertdata()
+    {
+        insertbtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Boolean Inserted = mydb.insertData(etname.getText().toString(),etmarks.getText().toString());
+                if(Inserted)
+                {
+                    Toast.makeText(MainActivity.this, "Data is Inserted", Toast.LENGTH_SHORT).show();
+                }
+                else
+                {
+                    Toast.makeText(MainActivity.this, "Error Inserting", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+    }
+    public void showdata()
+    {
+        showbtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Cursor cursor = mydb.Showdata();
+                if(cursor.getCount() == 0)
+                {
+                    message("Error","No data");
+                    return;
+                }
+                StringBuffer buffer = new StringBuffer();
+                while(cursor.moveToNext())
+                {
+                    buffer.append("Id : " + cursor.getString(0)+"\n")
+                            .append("Name : "+ cursor.getString(1)+"\n")
+                            .append("marks : "+ cursor.getString(2)+"\n");
+                }
+                message("Data",buffer.toString());
+            }
+        });
+    }
+    public void update()
+    {
+        updatebtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Boolean updated = mydb.update(etid.getText().toString(),etname.getText().toString(),
+                        etmarks.getText().toString());
+                if(updated)
+                {
+                    Toast.makeText(MainActivity.this, "Updated", Toast.LENGTH_SHORT).show();
+                }
+                else
+                {
+                    Toast.makeText(MainActivity.this, "Error in Updating", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+    }
+
+    public void delete()
+    {
+        deletebtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Integer delete = mydb.delete(etid.getText().toString());
+                if(delete > 0)
+                {
+                    Toast.makeText(MainActivity.this, "Data Deleted", Toast.LENGTH_SHORT).show();
+                }
+                else
+                {
+                    Toast.makeText(MainActivity.this, "Data Not Deleted", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+    }
+    public void message(String title,String message)
+    {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setCancelable(true);
+        builder.setTitle(title)
+                .setMessage(message)
+                .show();
+    }
+}
+
+package com.example.sql;
+
+import android.content.ContentValues;
+import android.content.Context;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
+
+import androidx.annotation.Nullable;
+
+public class DatabaseHelper extends SQLiteOpenHelper {
+    public static final String Database_name = "Students.db";
+    public static final String Table_name = "Student_table";
+    public static final String col_id = "Id";
+    public static final String col_name = "name";
+    public static final String col_marks = "marks";
+    public DatabaseHelper(@Nullable Context context) {
+        super(context, Database_name, null, 1);
+    }
+    @Override
+    public void onCreate(SQLiteDatabase db) {
+        db.execSQL("create table " + Table_name +" (Id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT , marks INTEGER)");
+    }
+    @Override
+    public void onUpgrade(SQLiteDatabase sqLiteDatabase, int i, int i1) {
+        sqLiteDatabase.execSQL("DROP TABLE IF EXISTS "+Table_name);
+        onCreate(sqLiteDatabase);
+    }
+    public boolean insertData(String name,String marks)
+    {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put(col_name,name);
+        cv.put(col_marks,marks);
+        Long result = db.insert(Table_name,null,cv);
+        if(result == -1 )
+        {
+            return false;
+        }
+        else
+        {
+            return true;
+        }
+    }
+
+    public Cursor Showdata()
+    {
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cursor = db.rawQuery("select * from "+Table_name,null);
+        return cursor;
+    }
+
+    public boolean update(String id,String name,String marks)
+    {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put(col_id,id);
+        cv.put(col_name,name);
+        cv.put(col_marks,marks);
+        db.update(Table_name,cv,"Id = ?",new String[] { id });
+        return true;
+    }
+    public Integer delete(String id)
+    {
+        SQLiteDatabase db = this.getWritableDatabase();
+        return db.delete(Table_name,"Id = ?",new String[] {id});
+    }
+}
